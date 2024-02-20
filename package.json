@@ -1,0 +1,51 @@
+{
+  "name": "cmao-ui",
+  "version": "1.0.3",
+  "description": "",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "files": [
+    "lib"
+  ],
+  "sideEffects": [
+    "dist/*",
+    "esm/**/style/*",
+    "lib/**/style/*",
+    "*.scss"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "npm run build:types && gulp",
+    "build:watch": "npm run build && gulp watch",
+    "build:types": "tsc -p tsconfig.build.json"
+  },
+  "author": "shinesheng",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/plugin-transform-runtime": "^7.23.7",
+    "@babel/preset-env": "^7.23.8",
+    "@babel/preset-react": "^7.23.3",
+    "@babel/preset-typescript": "^7.23.3",
+    "@types/react": "^18.2.47",
+    "@types/react-dom": "^18.2.18",
+    "gulp": "^4.0.2",
+    "gulp-autoprefixer": "^7.0.1",
+    "gulp-babel": "^8.0.0",
+    "gulp-cssnano": "^2.1.3",
+    "gulp-sass": "^5.1.0",
+    "gulp-watch": "^5.0.1",
+    "sass": "^1.69.7",
+    "through2": "^4.0.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.0.1",
+    "font-awesome": "^4.7.0",
+    "react-redux": "^9.0.4"
+  },
+  "peerDependencies": {
+    "react": ">=18.2.0",
+    "react-dom": ">=18.2.0"
+  }
+}
