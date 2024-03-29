@@ -11,8 +11,8 @@ import React, { useEffect } from 'react';
 let ie = /msie (\d+\.\d+)/i.test(navigator.userAgent) ? (document.DOCUMENT_NODE || + RegExp['\x241']) : 0;
 const Temp = (props: any) => {
 
-    useEffect(() => {
-    }, []);
+    // useEffect(() => {
+    // }, []);
 
     const onChange = (e: any) => {
         let value = e.target.value;
@@ -50,9 +50,11 @@ const Temp = (props: any) => {
     }
 
 
-    var cls = [
-        'fp-form-input', props.className
-    ];
+    var cls = ['fp-form-input'];
+
+    if (props.className) {
+        cls.push(props.className);
+    }
 
     if (props.size) {
         cls.push('fp-input-' + props.size);

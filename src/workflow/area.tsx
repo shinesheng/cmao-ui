@@ -8,7 +8,11 @@ import React, {
 import { connect } from 'react-redux';
 import action from './store/action';
 
-interface Node {
+import Dialog from '../dialog';
+import '../dialog/style/index.scss';
+const Prompt = Dialog.Prompt;
+
+export interface Node {
     id?: string;
     name?: string;
     left?: number;
@@ -16,6 +20,7 @@ interface Node {
     type?: string;
     isShowNodeico?: boolean;
     css?: Record<string, any>;
+    isAllAuditor?: boolean;
     isShowNodeclose?: boolean;
     className?: Array<string>;
     bClassName?: string;
@@ -33,7 +38,7 @@ interface NodeHistory {
     namelist?: string;
 }
 
-interface Line {
+export interface Line {
     id?: string;
     marked?: boolean;
     $line: any;
@@ -45,15 +50,8 @@ interface Line {
     sp?: string;
     ep?: string;
     mark?: string;
+    name?: string;
 }
-// interface Line$line {
-//     // path?: { stroke: string; markerEnd: string; d?: string; };
-//     path?: any;
-//     hi?: any;
-//     text?: any;
-//     from?: string;
-//     to?: string;
-// }
 
 interface Props {
     id: string;
@@ -63,6 +61,19 @@ interface Props {
     changeCurrentBtn?: (arg0: string) => void;
     $nowType?: string;
     ref?: any;
+    /**
+    * 双击节点node的回调方法
+    * @param arg0 当前节点node
+    * @returns 
+    */
+    openNode?: (arg0: Node) => void;
+    /**
+     * 双击线line的回调方法
+     * @param arg0 当前点击的线line
+     * @param arg1 当前点击的线line来自的节点
+     * @returns 
+     */
+    openLine?: (arg0: Line, arg1: Node) => void;
 }
 //
 const Temp: React.FC<Props> = forwardRef((props, ref) => {
@@ -105,9 +116,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
     };
 
     //点击画布区域
-    const clickWorkArea = (
-        eee: MouseEvent<HTMLDivElement, globalThis.MouseEvent>,
-    ) => {
+    const clickWorkArea = (eee: MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         let dfop = props;
         if (!dfop.isPreview) {
             let e = eee || window.event;
@@ -133,14 +142,14 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             if (type == 'startround') {
                 name = '开始';
                 if (hasStartround) {
-                    console.log('只能有一个开始节点');
+                    Prompt.warn('只能有一个开始节点');
                     return false;
                 }
             }
             if (type == 'endround') {
                 name = '结束';
                 if (hasEndround) {
-                    console.log('只能有一个结束节点');
+                    Prompt.warn('只能有一个结束节点');
                     return false;
                 }
             }
@@ -154,9 +163,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
     };
 
     //划线时用的绑定
-    const workAreaMouseMove = (
-        e: MouseEvent<HTMLDivElement, globalThis.MouseEvent>,
-    ) => {
+    const workAreaMouseMove = (e: MouseEvent<HTMLDivElement, globalThis.MouseEvent>) => {
         let dfop = props;
         if (dfop.isPreview) {
             return;
@@ -185,9 +192,9 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             line.path!.markerEnd = 'url(#arrow3)';
         }
         setLines([...lines]);
-        console.log('workAreaMouseMove');
     };
 
+    //划线时用的绑定结束
     const workAreaMouseup = () => {
         let dfop = props;
         if (dfop.isPreview) {
@@ -210,18 +217,34 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             }
         }
         setLines([...lines]);
-        console.log('workAreaMouseup', lines);
     };
 
-    const gClick = (id: string) => {
-        focusItem(id, 'line');
+    /**点击线 */
+    const gClick = (line: Line, e: any) => {
+        e.stopPropagation();
+        if (e.detail > 1) {
+            //当前线条来自的节点
+            let nodeData = null;
+            //点击次数大于1，当作双击
+            nodes.forEach(function (o) {
+                if (o.id == line.from) {
+                    nodeData = o;
+                    return false;
+                }
+            });
+            props.openLine && props.openLine(line, nodeData!);
+        } else {
+            //单击
+            if (props.isPreview) {
+                return;
+            }
+            focusItem(line.id!, 'line');
+        }
     };
 
     const linemoverMousedown = (e: any) => {
         if (e.button == 2) return false;
         let lm = $linemover.current;
-        // lm.css({ "background-color": "#333" });
-        // var $workArea = e.data.$workArea;
         if (!lineMove.css) {
             lineMove.css = {};
         }
@@ -248,9 +271,8 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 X = X - vX;
                 if (X < 0) X = 0;
                 else if (X > 5000) X = 5000;
-                // lm.css({ left: X + "px" });
+
                 let newCss = { left: X + 'px' };
-                console.log(newCss);
                 Object.assign(newCss, lineMove.css);
                 newCss.left = X + 'px';
                 lineMove.css = newCss;
@@ -258,7 +280,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 Y = Y - vY;
                 if (Y < 0) Y = 0;
                 else if (Y > 5000) Y = 5000;
-                // lm.css({ top: Y + "px" });
+
                 if (!lineMove.css) {
                     lineMove.css = {};
                 }
@@ -269,7 +291,6 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             }
             isMove = true;
             setLineMove({ ...lineMove });
-            console.log('linemoverMousedown-onmousemove');
         };
         document.onmouseup = function () {
             let lineId = lineMove.data.tid;
@@ -289,11 +310,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             document.onmousemove = null;
             document.onmouseup = null;
             setLineMove({ ...lineMove });
-            console.log(lineMove.css);
-            console.log(lineOper.css);
-            console.log('linemoverMousedown-onmouseup');
         };
-        console.log('linemoverMousedown');
     };
 
     const lineoperClick = (e: any) => {
@@ -359,6 +376,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             $node.className!.push('item-' + $node.type);
             $node.name = node.name + auditor;
             $node.bClassName = '';
+            // $node.isShowNodeico = false;
         }
         $node.css!.top = $node.top;
         $node.css!.left = $node.left;
@@ -614,7 +632,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         props.changeCurrentBtn!('cursor');
     };
 
-    //获取一个DIV的绝对坐标的功能函数,即使是非绝对定位,一样能获取到
+    /**获取一个DIV的绝对坐标的功能函数,即使是非绝对定位,一样能获取到 */
     const getElCoordinate = (dom: any) => {
         // var dom = e.currentTarget;
         let t = dom.offsetTop;
@@ -631,7 +649,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         };
     };
 
-    // 获取鼠标定位点坐标
+    /**获取鼠标定位点坐标 */
     const mousePosition = (
         e:
             | Event
@@ -655,7 +673,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         };
     };
 
-    //绑定用鼠标移动事件(节点拖动)
+    /**绑定用鼠标移动事件(节点拖动) */
     const nodeIcoMousedown = (nodeData: any, e: any) => {
         if (props.isPreview) {
             return;
@@ -669,41 +687,41 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         let id = nodeData.id;
         let $workAreaCCC = $workArea.current;
         focusItem(id, 'node');
-        let ev = mousePosition(e),
-            t = getElCoordinate($workAreaCCC);
+        let ev = mousePosition(e),//鼠标定位
+            t = getElCoordinate($workAreaCCC);//流程组件div距离最上级的左、顶部距离
         ghost.isShow = true;
         ghost.name = nodeData.name;
         ghost.type = nodeData.type;
         ghost.bClassName = nodeData.bClassName;
         ghost.isShowNodeico = nodeData.isShowNodeico;
-        if (
-            nodeData.type == 'endround' ||
-            nodeData.type == 'startround' ||
-            nodeData.type == 'conditionnode'
-        ) {
+        if (nodeData.type == 'endround' || nodeData.type == 'startround' || nodeData.type == 'conditionnode') {
             ghost.css = { paddingLeft: 0 };
         } else {
             ghost.css = { paddingLeft: 48 };
         }
 
-        if (nodeData.type == 'conditionnode') {
-        }
+        if (nodeData.type == 'conditionnode') { }
 
         let X: any, Y: any;
         t.left = 0;
-        X = ev.x - t.left;
-        Y = ev.y - t.top;
+        X = ev.x - t.left;//鼠标当前整个页面定位x 减去 div左距离 = 当前鼠标在div内部的x距离
+        Y = ev.y - t.top;//同上原理，当前鼠标在div内部的y距离
         let vX = X - nodeData.left,
             vY = Y - nodeData.top;
         let isMove = false;
-        // var hack = 1;
-        // if (navigator.userAgent.indexOf("8.0") != -1) hack = 0;
+
         document.onmousemove = function (e: any) {
             if (!e) e = window.event;
             let ev = mousePosition(e);
+            /**
+             * 思路
+             * 最开始的ghost节点会和nodeData的定位一样，随着鼠标移动，并随着变化
+             * 在刚点击下该节点时，记录下来nodeData的定位
+             * 监听鼠标移动的定位，并计算它和nodeData的差值 
+             */
             if (X == ev.x - vX && Y == ev.y - vY) return false;
             X = ev.x - vX;
-            Y = ev.y - vY - 47;
+            Y = ev.y - vY - 0;
             if (isMove && !ghost.css.display && ghost.css.display != 'table') {
                 ghost.css = {
                     display: 'table',
@@ -715,30 +733,28 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 };
             }
             if (X < 60) {
-                X = 60;
+                X = 60;//这儿会让节点不能拖到最左，永远离左边隔60px
             } else if (X + nodeData.width > t.left + $workAreaCCC!.clientWidth) {
                 X = t.left + $workAreaCCC!.clientWidth - nodeData.width;
             }
 
             if (Y < 0) {
                 Y = 0;
-            } else if (
-                Y + nodeData.height >
-                t.top + $workAreaCCC!.clientHeight - 47
-            ) {
-                Y = $workAreaCCC!.clientHeight - nodeData.height + t.top - 47;
+            } else if (Y + nodeData.height > t.top + $workAreaCCC!.clientHeight - 0) {
+                Y = $workAreaCCC!.clientHeight - nodeData.height + t.top - 0;
             }
             isMove = true;
             let newcss: any = {};
             Object.assign(newcss, ghost.css);
-            newcss.left = X;
-            newcss.top = Y;
+            newcss.left = X - t.left;
+            newcss.top = Y + 0 - t.top;
             ghost.css = newcss;
             setGhost({ ...ghost });
         };
         document.onmouseup = function () {
             ghost = { isShow: false };
-            if (isMove) moveNode(nodeData, X - t.left, Y + 47 - t.top);
+            // ghost.isShow = true;
+            if (isMove) moveNode(nodeData, X - t.left, Y + 0 - t.top);
             document.onmousemove = null;
             document.onmouseup = null;
             setGhost({ ...ghost });
@@ -825,7 +841,6 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             line.$line = $line;
             lines.push(line);
         }
-        console.log('nodespotMousedown');
     };
 
     //绑定连线时确定结束点
@@ -846,7 +861,6 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         } else if (kind == 'bottom') {
             position = 'bottom';
         }
-        console.log('lineStart', lineStart);
         if (lineStart)
             addLine({
                 id: newGuid(),
@@ -856,9 +870,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 ep: position,
                 name: '',
             });
-        console.log(lines);
         setLines([...lines]);
-        console.log('nodespotMouseup');
     };
 
     const nodespotMouseenter = () => {
@@ -1066,7 +1078,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             // var nodeData = {
             //     id: node.id
             // };
-            // props.openNode && _this.props.openNode(nodeData, _this.state.nodes);
+            props.openNode && props.openNode(node);
         } else {
             //单击
             if (props.isPreview) {
@@ -1129,6 +1141,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
 
     // 重构所有连向某个结点的线的显示，传参结构为$nodeData数组的一个单元结构
     const resetLines = (nodeId: string) => {
+        // let tmpList: Line[] = [];
         let $line;
         for (let i = 0, l = lines.length; i < l; i++) {
             let sxy = [];
@@ -1137,19 +1150,6 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             if (line.from == nodeId || line.to == nodeId) {
                 sxy = getLineSpotXY(line.from!, line.sp!);
                 exy = getLineSpotXY(line.to!, line.ep!);
-
-                let tmpline;
-                lines.forEach(function (o) {
-                    //
-                    if (o.id == line.id) {
-                        tmpline = o;
-                    }
-                });
-                if (tmpline) {
-                    if (lines.indexOf(tmpline) > 0) {
-                        lines.splice(lines.indexOf(tmpline), 1);
-                    }
-                }
 
                 if (line.type == 'sl') {
                     $line = drawLine(line.color, line.id, sxy, exy, line.mark, '');
@@ -1166,11 +1166,14 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                     );
                 }
 
+                // let lineData = getLine(line.id!);
+                // $line.name = lineData?.M
                 line.$line = $line;
-                lines.push(line);
-                setLines([...lines]);
+                // tmpList.push(line);
             }
         }
+
+        setLines([...lines]);
     };
 
     //重新设置连线的样式 newType= "sl":直线, "lr":中段可左右移动型折线, "tb":中段可上下移动型折线
@@ -1291,15 +1294,9 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 className="lr-workflow-workinner"
                 ref={$workArea}
                 // unselectable='on'
-                onClick={(e) => {
-                    clickWorkArea(e);
-                }}
-                onMouseMove={(e) => {
-                    workAreaMouseMove(e);
-                }}
-                onMouseUp={() => {
-                    workAreaMouseup();
-                }}
+                onClick={(e) => { clickWorkArea(e); }}
+                onMouseMove={(e) => { workAreaMouseMove(e); }}
+                onMouseUp={() => { workAreaMouseup(); }}
             >
                 <svg id={'draw_' + props.id} style={{ width: 5000, height: 5000 }}>
                     <defs>
@@ -1362,8 +1359,8 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                                 id={o.id}
                                 from={o.from}
                                 to={o.to}
-                                onClick={() => {
-                                    gClick(o.id!);
+                                onClick={(e) => {
+                                    gClick(o, e);
                                 }}
                             >
                                 <path
@@ -1389,7 +1386,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                                         x={text.x}
                                         y={text.y}
                                         style={text.style}
-                                    ></text>
+                                    >{o.name}</text>
                                 ) : null}
                             </g>
                         );
@@ -1410,33 +1407,19 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                     newNodeCss.top = o.top;
                     //节点
                     return (
-                        <div
-                            className={o.className!.join(' ')}
+                        <div className={o.className!.join(' ')}
                             id={o.id}
                             key={i}
                             style={newNodeCss}
-                            onClick={(e) => {
-                                nodeClick(o, e);
-                            }}
-                            onMouseEnter={() => {
-                                nodeMouseEnter(o);
-                            }}
-                            onMouseLeave={() => {
-                                nodeMouseLeave(o);
-                            }}
+                            onClick={(e) => { nodeClick(o, e); }}
+                            onMouseEnter={() => { nodeMouseEnter(o); }}
+                            onMouseLeave={() => { nodeMouseLeave(o); }}
                         >
                             {
                                 //节点图标
                                 o.isShowNodeico ? (
-                                    <div
-                                        className="lr-workflow-nodeico"
-                                        onMouseDown={(e) => {
-                                            nodeIcoMousedown(o, e);
-                                        }}
-                                    >
-                                        {o.type != 'startround' && o.type != 'endround' ? (
-                                            <b className={o.bClassName}></b>
-                                        ) : null}
+                                    <div className="lr-workflow-nodeico" onMouseDown={(e) => { nodeIcoMousedown(o, e); }} >
+                                        {o.type != 'startround' && o.type != 'endround' ? (<b className={o.bClassName}></b>) : null}
                                     </div>
                                 ) : null
                             }
@@ -1444,19 +1427,13 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                             <div className="lr-workflow-nodeassemble">
                                 {/* 删除节点按钮 */}
                                 {o.isShowNodeclose ? (
-                                    <div
-                                        className="lr-workflow-nodeclose"
+                                    <div className="lr-workflow-nodeclose"
                                         style={{ display: 'block' }}
-                                        onClick={() => {
-                                            delNode(o);
-                                        }}
-                                    ></div>
+                                        onClick={() => { delNode(o); }}></div>
                                 ) : null}
                                 <div
                                     className="lr-workflow-nodespot left"
-                                    onMouseDown={() => {
-                                        nodespotMousedown(o, 'left');
-                                    }}
+                                    onMouseDown={() => { nodespotMousedown(o, 'left'); }}
                                     onMouseUp={() => {
                                         nodespotMouseup(o, 'left');
                                     }}
@@ -1513,21 +1490,12 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                     );
                 })}
                 {/* 操作折线时的移动框 */}
-                <div
-                    className="lr-workflow-linemover"
-                    style={lineMove.css}
-                    ref={$linemover}
-                    onMouseDown={(e) => {
-                        linemoverMousedown(e);
-                    }}
-                ></div>
+                <div className="lr-workflow-linemover" style={lineMove.css} ref={$linemover}
+                    onMouseDown={(e) => { linemoverMousedown(e); }}  ></div>
                 <div
                     className="lr-workflow-lineoper"
                     style={lineOper.css}
-                    onClick={(e) => {
-                        lineoperClick(e);
-                    }}
-                >
+                    onClick={(e) => { lineoperClick(e); }}  >
                     <b className="lr"></b>
                     <b className="tb"></b>
                     <b className="sl"></b>

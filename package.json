@@ -1,6 +1,6 @@
 {
   "name": "cmao-ui",
-  "version": "1.0.3",
+  "version": "1.0.6",
   "description": "",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -15,8 +15,8 @@
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "gulpBuild": "npm run build:types && gulp",
-    "gulpBuild:watch": "npm run build && gulp watch",
+    "gulpBuild": "npm run gulpBuild:types && gulp",
+    "gulpBuild:watch": "npm run gulpBuild && gulp watch",
     "gulpBuild:types": "tsc -p tsconfig.build.json",
     "webpackBuild:watch": "webpack -w"
   },

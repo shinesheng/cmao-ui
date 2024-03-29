@@ -30,6 +30,10 @@ const Modal = (props: any) => {
             }
         }
     }
+    if (props.style && props.style.height && !props.style.height) {
+        let topH = (window.innerHeight - props.style.height) / 2;
+        props.style.top = topH;
+    }
 
     var cls = ['fp-modal-container', props.wrapClassName];
     return (

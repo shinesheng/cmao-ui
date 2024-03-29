@@ -5,7 +5,7 @@ const Temp = (props: any) => {
     }, []);
 
     const onActiveChange = (index: any) => {
-        index != props.active && props.onChange(index);
+        index != props.active && props.onChange && props.onChange(index);
     }
 
     var cls = ['fp-tabPage', props.className];

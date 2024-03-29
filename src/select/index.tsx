@@ -27,31 +27,66 @@ import Input from '../input/index';
  */
 
 const _body = document.body;
-
+const defaultKeyMap = {
+    name: 'name',
+    value: 'value'
+};
 let ie = /msie (\d+\.\d+)/i.test(navigator.userAgent) ? (document.DOCUMENT_NODE || + RegExp['\x241']) : 0;
 
 const Temp = (props: any) => {
-    let [showName, setShowName] = useState<any>();
-    let [showOptions, setShowOptions] = useState<any>([]);
-    let [filterable] = useState<any>();
-    let [placeholder] = useState<any>();
-    let [show, setShow] = useState<any>();
-    let [pRect, setpRect] = useState<any>({
-        right: 0,
-        left: 0
-    });
-    let [top, setTop] = useState<any>();
-    let [position] = useState<any>();
-    let [totalOptions] = useState<any>();
-    let [keyMap] = useState<any>();
-    let [value, setValue] = useState<any>();
+    const generateValueMap = (options: any, keyMap: any) => {
+        const { value, name } = keyMap;
+        let valueMap: any = {};
+
+        const traverseTree = (node: any) => {
+            if (node) {
+                valueMap[node[value]] = node[name];
+            }
+        };
+
+        if (options && options.length > 0) {
+            options.forEach((node: any) => traverseTree(node));
+        }
+        return valueMap;
+
+    }
+
+    const findOptionsName = (val: any, totalDataValueMap: any) => {
+        return totalDataValueMap ? totalDataValueMap[val] : "";
+    }
+
+
+    // const { options, disabled } = props;
+    let totalDataValueMap = generateValueMap(props.options, defaultKeyMap);
+
+    let [show, setShow] = useState<boolean>(false);
+    let [showName, setShowName] = useState<any>(findOptionsName(props.value, totalDataValueMap));
+    let [keyMap] = useState<any>(defaultKeyMap);
+    let [showTree] = useState<any>(props.showTree || false);
+    let [value, setValue] = useState<any>(props.value);
+    value = props.value
+    showName = findOptionsName(props.value, totalDataValueMap)
+    let [filterable] = useState<any>(!props.disabled ? props.filterable || false : false);
+    let [showOptions, setShowOptions] = useState<any>(props.options || []);
+    let [totalOptions] = useState<any>(props.options || []);
+    let [placeholder] = useState<any>(props.placeholder || '请选择');
+    let [showMap] = useState<any>({});
+    let [inputHovering] = useState<any>(false);
+    let [pRect, setpRect] = useState<any>({});
+    let [top, setTop] = useState<any>(0);
+    let [position] = useState<any>(props.position || "absolute");
+
+
 
     const selectInputRef = useRef<HTMLDivElement | null>(null);
     const dropdownRef = useRef<HTMLDivElement | any>(null);
     const inputItemRef = useRef<HTMLDivElement | null>(null);
 
-    useEffect(() => {
-    }, []);
+    // useEffect(() => {
+
+    // }, []);
+
+
 
     const onClick = (event: any) => {
         if (props.disabled) return;
@@ -89,6 +124,7 @@ const Temp = (props: any) => {
         }
     }
 
+
     const filterOption = (e: any) => {
         let keyword = e.target.value;
         showOptions = keyword ? totalOptions.filter((item: any) => item[keyMap.name].match(keyword.replace(/\\/g, '\\\\'))) : totalOptions;
@@ -98,8 +134,6 @@ const Temp = (props: any) => {
     }
 
     const handleClickItem = (item: any, event: any) => {
-        // const { showMap, keyMap } = this.state;
-
         var newValue = item[keyMap.value];
         showName = item[keyMap.name];
         setShowName(showName);
@@ -110,7 +144,7 @@ const Temp = (props: any) => {
             props.onChange && props.onChange({
                 target: {
                     name: props.name,
-                    value: value
+                    value: newValue
                 }  // 这里为了兼容之前的select设置值的入参格式，没有办法了~
             });
         }
@@ -129,9 +163,9 @@ const Temp = (props: any) => {
         </li>;
     }
 
-    const { className, size, wtype, disabled, name, height } = props;
+    const { className, size, wtype, name, height } = props;
     let cls = ['fp-form-select', className];
-    if (disabled) {
+    if (props.disabled) {
         cls.push('is-disabled');
     }
     return (<div className={cls.join(' ')} ref={selectInputRef}>
@@ -141,7 +175,7 @@ const Temp = (props: any) => {
             size={size}
             wtype={wtype}
             name={name}
-            disabled={disabled}
+            disabled={props.disabled}
             onClick={onClick}
             onChange={filterOption}
             placeholder={placeholder}
@@ -155,7 +189,10 @@ const Temp = (props: any) => {
             top: position === 'absolute' ? top : null,
             display: show ? 'block' : 'none'
         }}>
-            {showOptions.map((item: any, index: any) => renderOption(item, index))}
+            {/* {showOptions.map((item: any, index: any) => renderOption(item, index))} */}
+
+            {props.options.map((item: any, index: any) => renderOption(item, index))}
+
         </ul>
     </div>);
 }

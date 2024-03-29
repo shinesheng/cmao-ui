@@ -14,6 +14,7 @@ interface Props {
     /**校验规则 */
     rules?: RuleConfig,
     children?: any;
+    type?: any;
 }
 const Temp = forwardRef((props: Props, ref) => {
     const { children, rules, ...otherPorps } = props;
@@ -26,13 +27,97 @@ const Temp = forwardRef((props: Props, ref) => {
         formTitle[props.name] = props.title;
     }, []);
 
-    const onChange = (e: any) => {
+    const onChange = (e: any, child: any) => {
         let data: any = {};
         Object.assign(data, formData);
         data[props.name] = e.target.value;
         changeForm && changeForm(data);
         //变更时，去除错误信息框
         formValidMsg[props.name] = '';
+
+        //执行该组件的onchange事件
+        child && child.props && child.props.onchange && child.props.onchange(e);
+    }
+
+
+    const handleHtml = () => {
+        if (props.type == 'radio') {
+            return <>
+                <Row>
+                    <Col span={24} className='cmao-form-item'>
+                        <div className="form-item-title">{props.title}</div>
+                        <div className="form-control2">
+                            {
+                                React.Children.map(children, child => {
+                                    let cls = {};
+                                    if (formValidMsg[props.name]) {
+                                        cls = { className: 'cmao-field-error' };
+                                    }
+                                    let ischeck = false;
+                                    if (child.props.value == formData[props.name]) {
+                                        ischeck = true;
+                                    }
+                                    // let 
+                                    return React.cloneElement(child, { ...otherPorps, ...cls, ...{ onChange: onChange, checked: ischeck } })
+                                })
+                            }
+
+                            {
+                                formValidMsg[props.name] ? <div className='cmao-field-error-info' title={formValidMsg[props.name]}><i className='fa fa-info-circle'></i></div> : null
+                            }
+                        </div>
+                    </Col>
+                </Row>
+            </>
+        }
+        else if (props.type == 'select') {
+            return <>
+                <Row>
+                    <Col span={24} className='cmao-form-item'>
+                        <div className="form-item-title">{props.title}</div>
+                        <div className="form-control2">
+                            {
+                                React.Children.map(children, child => {
+                                    let cls = {};
+                                    if (formValidMsg[props.name]) {
+                                        cls = { className: 'cmao-field-error' };
+                                    }
+                                    return React.cloneElement(child, { ...otherPorps, ...cls, ...{ onChange: (e: any) => { onChange(e, child) }, val: formData[props.name] || '', value: formData[props.name] || '' } })
+                                })
+                            }
+
+                            {
+                                formValidMsg[props.name] ? <div className='cmao-field-error-info' title={formValidMsg[props.name]}><i className='fa fa-info-circle'></i></div> : null
+                            }
+                        </div>
+                    </Col>
+                </Row>
+            </>
+        }
+        else {
+            return <>
+                <Row>
+                    <Col span={24} className='cmao-form-item'>
+                        <div className="form-item-title">{props.title}</div>
+                        <div className="form-control">
+                            {
+                                React.Children.map(children, child => {
+                                    let cls = {};
+                                    if (formValidMsg[props.name]) {
+                                        cls = { className: 'cmao-field-error' };
+                                    }
+                                    return React.cloneElement(child, { ...otherPorps, ...cls, ...{ onChange: onChange, value: formData[props.name] || '' } })
+                                })
+                            }
+
+                            {
+                                formValidMsg[props.name] ? <div className='cmao-field-error-info' title={formValidMsg[props.name]}><i className='fa fa-info-circle'></i></div> : null
+                            }
+                        </div>
+                    </Col>
+                </Row>
+            </>
+        }
     }
 
     if (props.isValid) {
@@ -40,27 +125,7 @@ const Temp = forwardRef((props: Props, ref) => {
         initValid(props.name, props.rules);
     }
 
-    return (<>
-        <Row>
-            <Col span={24} className='cmao-form-item'>
-                <div className="form-item-title">{props.title}</div>
-                <div className="form-control">
-                    {
-                        React.Children.map(children, child => {
-                            let cls = {};
-                            if (formValidMsg[props.name]) {
-                                cls = { className: 'cmao-field-error' };
-                            }
-                            return React.cloneElement(child, { ...otherPorps, ...cls, ...{ onChange: onChange, value: formData[props.name] || '' } })
-                        })
-                    }
-                    {
-                        formValidMsg[props.name] ? <div className='cmao-field-error-info' title={formValidMsg[props.name]}><i className='fa fa-info-circle'></i></div> : null
-                    }
-                </div>
-            </Col>
-        </Row>
-    </>);
+    return (handleHtml());
 });
 
 export default Temp;

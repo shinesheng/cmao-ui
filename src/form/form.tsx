@@ -38,6 +38,7 @@ const Temp = (props: Props) => {
         Object.assign(formData, data);
         setFormData({ ...formData });
         wrapForm.data = formData;
+        setFormValidMsg({});
     }
 
     /**表单校验 */
@@ -75,11 +76,13 @@ const Temp = (props: Props) => {
             if (!r.code) {
                 validateflag = false;
                 formValidMsg[key] = r.msg;
-                setFormValidMsg({ ...formValidMsg });
 
                 Prompt.error('表单信息输入有误，请检查！ ' + formTitle[key] + r.msg);
             }
-
+            else{
+                formValidMsg[key] = '';
+            }
+            setFormValidMsg({ ...formValidMsg });
         }
         return validateflag;
     }
