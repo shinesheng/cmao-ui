@@ -12,12 +12,25 @@ import Dialog from '../dialog';
 import '../dialog/style/index.scss';
 const Prompt = Dialog.Prompt;
 
+export enum nodeType {
+    /**开始 */
+    StartRound = 1,
+    /**结束 */
+    EndRound = 2,
+    /**一般 */
+    StepNode = 3,
+    /**条件判断节点 */
+    ConditionNode = 4,
+    /**查阅节点 */
+    AuditorNode = 5,
+}
+
 export interface Node {
     id?: string;
     name?: string;
     left?: number;
     top?: number;
-    type?: string;
+    type?: nodeType;
     isShowNodeico?: boolean;
     css?: Record<string, any>;
     isAllAuditor?: boolean;
@@ -28,7 +41,7 @@ export interface Node {
     height?: number;
     history?: Array<NodeHistory>;
     state?: string;
-    wfForms?: Array<string>;
+    // wfForms?: Array<string>;
     auditors?: Array<string>;
     btnlist?: Array<string>;
     conditions?: Array<string>;
@@ -153,9 +166,27 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                     return false;
                 }
             }
+            let tmpType = null;
+            switch (type) {
+                case 'startround':
+                    tmpType = nodeType.StartRound;
+                    break;
+                case 'endround':
+                    tmpType = nodeType.EndRound;
+                    break;
+                case 'stepnode':
+                    tmpType = nodeType.StepNode;
+                    break;
+                case 'conditionnode':
+                    tmpType = nodeType.ConditionNode;
+                    break;
+                case 'auditornode':
+                    tmpType = nodeType.AuditorNode;
+                    break;
+            }
 
             addNode(
-                { id: newGuid(), name: name, left: X, top: Y, type: type },
+                { id: newGuid(), name: name, left: X, top: Y, type: tmpType! },
                 false,
             );
         }
@@ -353,45 +384,55 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                 auditor = '(' + node.history![0].namelist + ')';
             }
         }
-        if ($node.type == 'conditionnode') {
+        if ($node.type == nodeType.ConditionNode) {
             $node.width = 160;
             $node.height = 90;
             $node.className!.push('lr-workflow-node');
             $node.className!.push('item-conditionnode');
-            $node.bClassName = 'ico_' + node.type + 'div';
-        } else if ($node.type != 'startround' && $node.type != 'endround') {
+            // $node.bClassName = 'ico_' + node.type + 'div';
+            node.bClassName = 'ico_conditionnodediv';
+        } else if ($node.type != nodeType.StartRound && $node.type != nodeType.EndRound) {
             $node.className!.push('lr-workflow-node');
             $node.name = node.name + auditor;
-            $node.bClassName = 'ico_' + node.type;
+            // $node.bClassName = 'ico_' + node.type;
+            switch ($node.type) {
+                case nodeType.AuditorNode:
+                    $node.bClassName = 'ico_auditornode';
+                    break;
+                case nodeType.StepNode:
+                    $node.bClassName = 'ico_stepnode';
+                    break;
+            }
         } else {
             $node.width = 52;
             $node.height = 52;
-            if ($node.type == 'startround') {
+            if ($node.type == nodeType.StartRound) {
                 setHasStartround(true);
-            } else if ($node.type == 'endround') {
+                $node.className!.push('item-startround');
+            } else if ($node.type == nodeType.EndRound) {
                 $node.name = '结束';
                 setHasEndround(true);
+                $node.className!.push('item-endround');
             }
             $node.className!.push('lr-workflow-node');
-            $node.className!.push('item-' + $node.type);
+            // $node.className!.push('item-' + $node.type);
             $node.name = node.name + auditor;
             $node.bClassName = '';
-            // $node.isShowNodeico = false;
+            $node.isShowNodeico = false;
         }
         $node.css!.top = $node.top;
         $node.css!.left = $node.left;
         $node.css!.width = $node.width;
         $node.css!.height = $node.height;
 
+        console.log('addnode', node)
         if (
             node.state != undefined &&
-            (node.type == 'startround' ||
-                node.type == 'auditornode' ||
-                node.type == 'stepnode' ||
-                node.type == 'confluencenode' ||
-                node.type == 'childwfnode' ||
-                node.type == 'systemauditnode')
+            (node.type == nodeType.StartRound ||
+                node.type == nodeType.AuditorNode ||
+                node.type == nodeType.StepNode)
         ) {
+            console.log('yes')
             $node.css!.paddingLeft = 0;
             $node.css!.color = '#fff';
             $node.isShowNodeico = false;
@@ -424,25 +465,20 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         // 初始化节点的配置信息
         if (!isold) {
             switch (node.type) {
-                case 'startround':
-                    node.wfForms = [];
+                case nodeType.StartRound:
+                    // node.wfForms = [];
                     break;
-                case 'stepnode':
+                case nodeType.StepNode:
                     node.auditors = [];
-                    node.wfForms = [];
+                    // node.wfForms = [];
                     node.btnlist = [];
                     break;
-                case 'auditornode':
+                case nodeType.AuditorNode:
                     node.auditors = [];
-                    node.wfForms = [];
+                    // node.wfForms = [];
                     break;
-                case 'confluencenode': // 会签
-                    break;
-                case 'conditionnode': // 条件
+                case nodeType.ConditionNode: // 条件
                     node.conditions = [];
-                    break;
-                case 'childwfnode': // 条件
-                    node.auditors = [];
                     break;
             }
         }
@@ -451,7 +487,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
     };
 
     //删除结点
-    const delNode = (nodeData: any) => {
+    const delNode = (nodeData: Node) => {
         if (props.isPreview) {
             return;
         }
@@ -474,9 +510,9 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             }
         }
         setNodes([...nodes]);
-        if (nodeData.type == 'startround') {
+        if (nodeData.type == nodeType.StartRound) {
             setHasStartround(false);
-        } else if (nodeData.type == 'endround') {
+        } else if (nodeData.type == nodeType.EndRound) {
             setHasEndround(false);
         }
 
@@ -674,7 +710,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
     };
 
     /**绑定用鼠标移动事件(节点拖动) */
-    const nodeIcoMousedown = (nodeData: any, e: any) => {
+    const nodeIcoMousedown = (nodeData: Node, e: any) => {
         if (props.isPreview) {
             return;
         }
@@ -686,7 +722,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         }
         let id = nodeData.id;
         let $workAreaCCC = $workArea.current;
-        focusItem(id, 'node');
+        focusItem(id!, 'node');
         let ev = mousePosition(e),//鼠标定位
             t = getElCoordinate($workAreaCCC);//流程组件div距离最上级的左、顶部距离
         ghost.isShow = true;
@@ -694,20 +730,19 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         ghost.type = nodeData.type;
         ghost.bClassName = nodeData.bClassName;
         ghost.isShowNodeico = nodeData.isShowNodeico;
-        if (nodeData.type == 'endround' || nodeData.type == 'startround' || nodeData.type == 'conditionnode') {
+        if (nodeData.type == nodeType.EndRound || nodeData.type == nodeType.StartRound || nodeData.type == nodeType.ConditionNode) {
             ghost.css = { paddingLeft: 0 };
         } else {
             ghost.css = { paddingLeft: 48 };
         }
 
-        if (nodeData.type == 'conditionnode') { }
 
         let X: any, Y: any;
         t.left = 0;
         X = ev.x - t.left;//鼠标当前整个页面定位x 减去 div左距离 = 当前鼠标在div内部的x距离
         Y = ev.y - t.top;//同上原理，当前鼠标在div内部的y距离
-        let vX = X - nodeData.left,
-            vY = Y - nodeData.top;
+        let vX = X - nodeData.left!,
+            vY = Y - nodeData.top!;
         let isMove = false;
 
         document.onmousemove = function (e: any) {
@@ -725,8 +760,8 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             if (isMove && !ghost.css.display && ghost.css.display != 'table') {
                 ghost.css = {
                     display: 'table',
-                    width: nodeData.css.width,
-                    height: nodeData.css.height,
+                    width: nodeData.css!.width,
+                    height: nodeData.css!.height,
                     top: nodeData.top,
                     left: nodeData.left + t.left,
                     cursor: 'move',
@@ -735,13 +770,13 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
             if (X < 60) {
                 X = 60;//这儿会让节点不能拖到最左，永远离左边隔60px
             } else if (X + nodeData.width > t.left + $workAreaCCC!.clientWidth) {
-                X = t.left + $workAreaCCC!.clientWidth - nodeData.width;
+                X = t.left + $workAreaCCC!.clientWidth - nodeData.width!;
             }
 
             if (Y < 0) {
                 Y = 0;
             } else if (Y + nodeData.height > t.top + $workAreaCCC!.clientHeight - 0) {
-                Y = $workAreaCCC!.clientHeight - nodeData.height + t.top - 0;
+                Y = $workAreaCCC!.clientHeight - nodeData.height! + t.top - 0;
             }
             isMove = true;
             let newcss: any = {};
@@ -1095,7 +1130,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
         nodes.forEach(function (o) {
             //
             if (o.id == line.from) {
-                if (o.type == 'endround' || o.type == 'auditornode') {
+                if (o.type == nodeType.EndRound || o.type == nodeType.AuditorNode) {
                     _isReturn = true;
                 }
                 return false;
@@ -1405,6 +1440,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                     Object.assign(newNodeCss, nodeCss);
                     newNodeCss.left = o.left;
                     newNodeCss.top = o.top;
+                    console.log(o);
                     //节点
                     return (
                         <div className={o.className!.join(' ')}
@@ -1419,7 +1455,7 @@ const Temp: React.FC<Props> = forwardRef((props, ref) => {
                                 //节点图标
                                 o.isShowNodeico ? (
                                     <div className="lr-workflow-nodeico" onMouseDown={(e) => { nodeIcoMousedown(o, e); }} >
-                                        {o.type != 'startround' && o.type != 'endround' ? (<b className={o.bClassName}></b>) : null}
+                                        {o.type != nodeType.StartRound && o.type != nodeType.EndRound ? (<b className={o.bClassName}></b>) : null}
                                     </div>
                                 ) : null
                             }
